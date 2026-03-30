@@ -1,3 +1,4 @@
 *.pdf
 __pycache__/
 wandb/
+data/oxford-iiit-pet/
