@@ -13,7 +13,54 @@ class VGG11Encoder(nn.Module):
 
     def __init__(self, in_channels: int = 3):
         """Initialize the VGG11Encoder model."""
-        pass
+        super().__init__()
+
+        # Reusable Max Pool Layer
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Block 1
+        self.block1 = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True)
+        )
+
+        # Block 2
+        self.block2 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True)
+        )
+
+        # Block 3
+        self.block3 = nn.Sequential(
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True)
+        )
+
+        # Block 4
+        self.block4 = nn.Sequential(
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True)
+        )
+
+        # Block 5
+        self.block5 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True)
+        )
 
     def forward(
         self, x: torch.Tensor, return_features: bool = False
@@ -28,5 +75,32 @@ class VGG11Encoder(nn.Module):
             - if return_features=False: bottleneck feature tensor.
             - if return_features=True: (bottleneck, feature_dict).
         """
-        # TODO: Implement forward pass.
-        raise NotImplementedError("Implement VGG11Encoder.forward")
+        feature_maps = {}
+
+        x1 = self.block1(x)
+        feature_maps["block1"] = x1
+        p1 = self.pool(x1)
+
+        x2 = self.block2(p1)
+        feature_maps["block2"] = x2
+        p2 = self.pool(x2)
+
+        x3 = self.block3(p2)
+        feature_maps["block3"] = x3
+        p3 = self.pool(x3)
+
+        x4 = self.block4(p3)
+        feature_maps["block4"] = x4
+        p4 = self.pool(x4)
+
+        x5 = self.block5(p4)
+        feature_maps["block5"] = x5
+        bottleneck = self.pool(x5)
+
+        if return_features:
+            return bottleneck, feature_maps
+        else:
+            return bottleneck
+        
+
+VGG11 = VGG11Encoder
