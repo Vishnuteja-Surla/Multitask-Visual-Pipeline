@@ -29,7 +29,7 @@ class CustomDropout(nn.Module):
         Returns:
             Output tensor.
         """
-        if self.training:
+        if self.training and (self.p > 0):
             mask = (torch.rand(x.shape, device=x.device) > self.p).to(x.dtype)
             x = (x * mask) / (1.0 - self.p)
 
