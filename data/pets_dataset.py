@@ -65,8 +65,8 @@ class OxfordIIITPetDataset(Dataset):
         ymin = int(root.find('.//ymin').text)
         ymax = int(root.find('.//ymax').text)
 
-        # 4. Convert bounding box to [x_center, y_center, width, height]
-        bbox = [(xmin + xmax)/2, (ymin + ymax)/2, (xmax - xmin), (ymax - ymin)]
+        # 4. Create a min-max Bounding Box
+        bbox = [xmin, ymin, xmax, ymax]
 
         # 5. Apply self.transforms on the image data
         breed_name = "_".join(filename.split("_")[:-1])
@@ -87,7 +87,16 @@ class OxfordIIITPetDataset(Dataset):
             else:
                 bbox = [0, 0, 0, 0]
 
+        if bbox != [0, 0, 0, 0]: # Only convert if the box wasn't cropped out
+            bbox = [
+                (bbox[0] + bbox[2]) / 2.0,  # x_center
+                (bbox[1] + bbox[3]) / 2.0,  # y_center
+                (bbox[2] - bbox[0]),        # width
+                (bbox[3] - bbox[1])         # height
+            ]
+
         # 6. Adjust the mask and return (image, label, bbox, mask)
         mask = torch.as_tensor(mask, dtype=torch.long) - 1
         bbox_tensor = torch.tensor(bbox, dtype=torch.float32)
+
         return img, label_idx, bbox_tensor, mask
