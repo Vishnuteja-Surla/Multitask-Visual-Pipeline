@@ -10,7 +10,7 @@ from .vgg11 import VGG11Encoder
 class VGG11Classifier(nn.Module):
     """Full classifier = VGG11Encoder + ClassificationHead."""
 
-    def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5):
+    def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5, use_batchnorm: bool = True):
         """
         Initialize the VGG11Classifier model.
         Args:
@@ -21,7 +21,7 @@ class VGG11Classifier(nn.Module):
         super().__init__()
 
         # VGG11 Encoder
-        self.encoder = VGG11Encoder(in_channels)
+        self.encoder = VGG11Encoder(in_channels, use_batchnorm)
 
         # FC Layers
         self.layer1 = nn.Sequential(

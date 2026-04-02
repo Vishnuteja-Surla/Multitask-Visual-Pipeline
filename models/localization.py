@@ -10,7 +10,7 @@ from .vgg11 import VGG11Encoder
 class VGG11Localizer(nn.Module):
     """VGG11-based localizer."""
 
-    def __init__(self, in_channels: int = 3, dropout_p: float = 0.5):
+    def __init__(self, in_channels: int = 3, dropout_p: float = 0.5, use_batchnorm: bool = True):
         """
         Initialize the VGG11Localizer model.
 
@@ -21,7 +21,7 @@ class VGG11Localizer(nn.Module):
         super().__init__()
 
         # VGG11 Encoder
-        self.encoder = VGG11Encoder(in_channels)
+        self.encoder = VGG11Encoder(in_channels, use_batchnorm)
 
         # FC Layers
         self.layer1 = nn.Sequential(

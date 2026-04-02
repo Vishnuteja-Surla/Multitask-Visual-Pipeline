@@ -9,7 +9,7 @@ from .layers import CustomDropout
 class MultiTaskPerceptionModel(nn.Module):
     """Shared-backbone multi-task model."""
 
-    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "classifier.pth", localizer_path: str = "localizer.pth", unet_path: str = "unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "unet"):
+    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "classifier.pth", localizer_path: str = "localizer.pth", unet_path: str = "unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "unet", use_batchnorm: bool = True):
         """
         Initialize the shared backbone/heads using these trained weights.
         Args:
@@ -25,7 +25,7 @@ class MultiTaskPerceptionModel(nn.Module):
         super().__init__()
 
         # 1. Shared Backbone
-        self.encoder = VGG11Encoder(in_channels)
+        self.encoder = VGG11Encoder(in_channels, use_batchnorm)
 
         # 2. Rebuilding the Heads
 
@@ -62,49 +62,50 @@ class MultiTaskPerceptionModel(nn.Module):
 
         # --- Segmentation Head ---
         self.up1 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
-        self.dec1 = nn.Sequential(
-            nn.Conv2d(1024, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            CustomDropout(dropout_p),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-            CustomDropout(dropout_p)
-        )
+        dec_1 = [nn.Conv2d(1024, 512, kernel_size=3, padding=1)]
+        if use_batchnorm:
+            dec_1.append(nn.BatchNorm2d(512))
+        dec_1.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p), nn.Conv2d(512, 512, kernel_size=3, padding=1)])
+        if use_batchnorm:
+            dec_1.append(nn.BatchNorm2d(512))
+        dec_1.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p)])
+        self.dec1 = nn.Sequential(*dec_1)
+
         self.up2 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
-        self.dec2 = nn.Sequential(
-            nn.Conv2d(1024, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            CustomDropout(dropout_p),
-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            CustomDropout(dropout_p)
-        )
+        dec_2 = [nn.Conv2d(1024, 256, kernel_size=3, padding=1)]
+        if use_batchnorm:
+            dec_2.append(nn.BatchNorm2d(256))
+        dec_2.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p), nn.Conv2d(256, 256, kernel_size=3, padding=1)])
+        if use_batchnorm:
+            dec_2.append(nn.BatchNorm2d(256))
+        dec_2.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p)])
+        self.dec2 = nn.Sequential(*dec_2)
+
         self.up3 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2)
-        self.dec3 = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True)
-        )
+        dec_3 = [nn.Conv2d(512, 128, kernel_size=3, padding=1)]
+        if use_batchnorm:
+            dec_3.append(nn.BatchNorm2d(128))
+        dec_3.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p), nn.Conv2d(128, 128, kernel_size=3, padding=1)])
+        if use_batchnorm:
+            dec_3.append(nn.BatchNorm2d(128))
+        dec_3.extend([nn.ReLU(inplace=True), CustomDropout(dropout_p)])
+        self.dec3 = nn.Sequential(*dec_3)
+
         self.up4 = nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2)
-        self.dec4 = nn.Sequential(            
-            nn.Conv2d(256, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True)
-        )
+        dec_4 = [nn.Conv2d(256, 64, kernel_size=3, padding=1)]
+        if use_batchnorm:
+            dec_4.append(nn.BatchNorm2d(64))
+        dec_4.append(nn.ReLU(inplace=True))
+        self.dec4 = nn.Sequential(*dec_4)
+
         self.up5 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2)
-        self.dec5 = nn.Sequential(            
-            nn.Conv2d(128, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True)
-        )
-        self.outConv = nn.Conv2d(32, seg_classes, kernel_size=1)
+        dec_5 = [nn.Conv2d(128, 32, kernel_size=3, padding=1)]
+        if use_batchnorm:
+            dec_5.append(nn.BatchNorm2d(32))
+        dec_5.append(nn.ReLU(inplace=True))
+        self.dec5 = nn.Sequential(*dec_5)
+
+        self.outConv = nn.Conv2d(32, num_breeds, kernel_size=1)
 
         # 3. Loading the raw state dicts from the files
         unet_checkpoint = torch.load(unet_path, map_location="cpu")
