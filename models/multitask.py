@@ -65,19 +65,23 @@ class MultiTaskPerceptionModel(nn.Module):
         self.dec1 = nn.Sequential(
             nn.Conv2d(1024, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
+            CustomDropout(dropout_p),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            CustomDropout(dropout_p)
         )
         self.up2 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
         self.dec2 = nn.Sequential(
             nn.Conv2d(1024, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
+            CustomDropout(dropout_p),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            CustomDropout(dropout_p)
         )
         self.up3 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2)
         self.dec3 = nn.Sequential(

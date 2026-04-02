@@ -4,6 +4,8 @@
 import torch
 import torch.nn as nn
 from .vgg11 import VGG11Encoder
+from .layers import CustomDropout
+
 class VGG11UNet(nn.Module):
     """U-Net style segmentation network.
     """
@@ -26,10 +28,12 @@ class VGG11UNet(nn.Module):
         self.dec1 = nn.Sequential(
             nn.Conv2d(1024, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
+            CustomDropout(dropout_p),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            CustomDropout(dropout_p)
         )
 
         self.up2 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
@@ -37,9 +41,11 @@ class VGG11UNet(nn.Module):
             nn.Conv2d(1024, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
+            CustomDropout(dropout_p),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            CustomDropout(dropout_p)
         )
 
         self.up3 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2)
