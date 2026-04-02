@@ -100,7 +100,7 @@ class MultiTaskPerceptionModel(nn.Module):
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True)
         )
-        self.outConv = nn.Conv2d(32, 3, kernel_size=1)
+        self.outConv = nn.Conv2d(32, seg_classes, kernel_size=1)
 
         # 3. Loading the raw state dicts from the files
         unet_state = torch.load(unet_path, map_location="cpu")
