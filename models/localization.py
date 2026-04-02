@@ -17,6 +17,7 @@ class VGG11Localizer(nn.Module):
         Args:
             in_channels: Number of input channels.
             dropout_p: Dropout probability for the localization head.
+            use_batchnorm: True if the layers should include batch normalization else False
         """
         super().__init__()
 

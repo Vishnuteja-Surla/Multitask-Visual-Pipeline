@@ -63,7 +63,7 @@ class VGG11Encoder(nn.Module):
         if use_batchnorm:
             layers5.append(nn.BatchNorm2d(512))
         layers5.append(nn.ReLU(inplace=True))
-        self.block4 = nn.Sequential(*layers5)
+        self.block5 = nn.Sequential(*layers5)
 
     def forward(
         self, x: torch.Tensor, return_features: bool = False

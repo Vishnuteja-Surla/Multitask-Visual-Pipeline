@@ -9,7 +9,7 @@ from .layers import CustomDropout
 class MultiTaskPerceptionModel(nn.Module):
     """Shared-backbone multi-task model."""
 
-    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "classifier.pth", localizer_path: str = "localizer.pth", unet_path: str = "unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "unet", use_batchnorm: bool = True):
+    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "checkpoints/classifier.pth", localizer_path: str = "checkpoints/localizer.pth", unet_path: str = "checkpoints/unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "unet", use_batchnorm: bool = True):
         """
         Initialize the shared backbone/heads using these trained weights.
         Args:
@@ -21,6 +21,7 @@ class MultiTaskPerceptionModel(nn.Module):
             unet_path: Path to trained unet weights.
             dropout_p: Dropout Probability to be followed in FC layers.
             encoder_backbone: The name of architecture from which encoder is to be extracted from. One of ["unet", "classifier", "localizer"].
+            use_batchnorm: True if the layers should include batch normalization else False
         """
         super().__init__()
 
@@ -105,7 +106,7 @@ class MultiTaskPerceptionModel(nn.Module):
         dec_5.append(nn.ReLU(inplace=True))
         self.dec5 = nn.Sequential(*dec_5)
 
-        self.outConv = nn.Conv2d(32, num_breeds, kernel_size=1)
+        self.outConv = nn.Conv2d(32, seg_classes, kernel_size=1)
 
         # 3. Loading the raw state dicts from the files
         unet_checkpoint = torch.load(unet_path, map_location="cpu")

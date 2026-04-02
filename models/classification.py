@@ -17,6 +17,7 @@ class VGG11Classifier(nn.Module):
             num_classes: Number of output classes.
             in_channels: Number of input channels.
             dropout_p: Dropout probability for the classifier head.
+            use_batchnorm: True if the layers should include batch normalization else False
         """
         super().__init__()
 
