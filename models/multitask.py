@@ -107,9 +107,13 @@ class MultiTaskPerceptionModel(nn.Module):
         self.outConv = nn.Conv2d(32, seg_classes, kernel_size=1)
 
         # 3. Loading the raw state dicts from the files
-        unet_state = torch.load(unet_path, map_location="cpu")
-        class_state = torch.load(classifier_path, map_location="cpu")
-        loc_state = torch.load(localizer_path, map_location="cpu")
+        unet_checkpoint = torch.load(unet_path, map_location="cpu")
+        class_checkpoint = torch.load(classifier_path, map_location="cpu")
+        loc_checkpoint = torch.load(localizer_path, map_location="cpu")
+
+        unet_state = unet_checkpoint.get("state_dict", unet_checkpoint)
+        class_state = class_checkpoint.get("state_dict", class_checkpoint)
+        loc_state = loc_checkpoint.get("state_dict", loc_checkpoint)
 
         # 4. Filtering encoder from states and renaming the layers in paths
         class_head = {k.replace("layer", "class_layer"): v for k, v in class_state.items() if not k.startswith("encoder.")}
