@@ -58,6 +58,8 @@ class IoULoss(nn.Module):
         # Area calculation
         inter_w = torch.clamp(inter_xmax - inter_xmin, min=0)
         inter_h= torch.clamp(inter_ymax - inter_ymin, min=0)
+        target_w = torch.clamp(target_w, min=0)
+        target_h= torch.clamp(target_h, min=0)
         
         pred_area = pred_w * pred_h
         target_area = target_w * target_h
