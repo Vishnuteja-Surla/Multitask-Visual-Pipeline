@@ -1,6 +1,6 @@
 """Unified multi-task model
 """
-
+import os
 import torch
 import torch.nn as nn
 from .vgg11 import VGG11Encoder
@@ -109,6 +109,25 @@ class MultiTaskPerceptionModel(nn.Module):
         self.outConv = nn.Conv2d(32, seg_classes, kernel_size=1)
 
         # 3. Loading the raw state dicts from the files
+
+        if not os.path.exists(classifier_path):
+            print(f"\n[ERROR] Missing required checkpoint: {classifier_path}")
+            print("You must train the classification task first to generate the VGG11 encoder weights.")
+            print("Run: python train.py -t classification [args]\n")
+            exit(1)
+
+        if not os.path.exists(unet_path):
+            print(f"\n[ERROR] Missing required checkpoint: {unet_path}")
+            print("You must train the segmentation task first to generate the VGG11 encoder weights.")
+            print("Run: python train.py -t segmentation [args]\n")
+            exit(1)
+
+        if not os.path.exists(localizer_path):
+            print(f"\n[ERROR] Missing required checkpoint: {localizer_path}")
+            print("You must train the localization task first to generate the VGG11 encoder weights.")
+            print("Run: python train.py -t localization [args]\n")
+            exit(1)
+
         unet_checkpoint = torch.load(unet_path, map_location="cpu")
         class_checkpoint = torch.load(classifier_path, map_location="cpu")
         loc_checkpoint = torch.load(localizer_path, map_location="cpu")
