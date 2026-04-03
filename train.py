@@ -50,15 +50,6 @@ def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # --- Defensive Check: Ensure pre-trained backbone exists for downstream tasks ---
-    if args.task in ["localization", "segmentation"]:
-        classifier_checkpoint = "checkpoints/classifier.pth"
-        if not os.path.exists(classifier_checkpoint):
-            print(f"\n[ERROR] Missing required checkpoint: {classifier_checkpoint}")
-            print("You must train the classification task first to generate the VGG11 encoder weights.")
-            print("Run: python train.py -t classification [args]\n")
-            exit(1) # Stop the script immediately
-
     # 1. Initiate Wandb Project
     wandb.init(
         project="DA6401_Assignment_02",
@@ -123,20 +114,32 @@ def main():
     if args.task == "classification":
         model = VGG11Classifier(dropout_p=args.dropout_p, use_batchnorm=args.use_batchnorm)
         ce_loss = nn.CrossEntropyLoss()
+
     elif args.task == "localization":
         model = VGG11Localizer(dropout_p=args.dropout_p, use_batchnorm=args.use_batchnorm)
-        class_checkpoint = torch.load("checkpoints/classifier.pth", map_location="cpu")
-        class_state = class_checkpoint.get("state_dict", class_checkpoint)
-        class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
-        model.encoder.load_state_dict(class_encoder, strict=False)
+
+        if os.path.exists("checkpoints/classifier.pth"):
+            class_checkpoint = torch.load("checkpoints/classifier.pth", map_location="cpu")
+            class_state = class_checkpoint.get("state_dict", class_checkpoint)
+            class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
+            model.encoder.load_state_dict(class_encoder, strict=False)
+        else:
+            print("[WARNING] classifier.pth missing. Initializing localizer encoder with random weights.")
+
         mse_loss = nn.MSELoss()
         iou_loss = IoULoss(reduction="mean")
+
     elif args.task == "segmentation":
         model = VGG11UNet(dropout_p=args.dropout_p, use_batchnorm=args.use_batchnorm)
-        class_checkpoint = torch.load("checkpoints/classifier.pth", map_location="cpu")
-        class_state = class_checkpoint.get("state_dict", class_checkpoint)
-        class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
-        model.encoder.load_state_dict(class_encoder, strict=False)
+
+        if os.path.exists("checkpoints/classifier.pth"):
+            class_checkpoint = torch.load("checkpoints/classifier.pth", map_location="cpu")
+            class_state = class_checkpoint.get("state_dict", class_checkpoint)
+            class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
+            model.encoder.load_state_dict(class_encoder, strict=False)
+        else:
+            print("[WARNING] classifier.pth missing. Initializing UNet encoder with random weights.")
+
         ce_loss = nn.CrossEntropyLoss()
         dice_loss = DiceLoss()
 

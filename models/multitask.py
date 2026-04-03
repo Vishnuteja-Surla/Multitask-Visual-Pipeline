@@ -110,55 +110,40 @@ class MultiTaskPerceptionModel(nn.Module):
 
         # 3. Loading the raw state dicts from the files
 
-        if not os.path.exists(classifier_path):
-            print(f"\n[ERROR] Missing required checkpoint: {classifier_path}")
-            print("You must train the classification task first to generate the VGG11 encoder weights.")
-            print("Run: python train.py -t classification [args]\n")
-            exit(1)
+        if os.path.exists(unet_path) and os.path.exists(classifier_path) and os.path.exists(localizer_path):
+            unet_checkpoint = torch.load(unet_path, map_location="cpu")
+            class_checkpoint = torch.load(classifier_path, map_location="cpu")
+            loc_checkpoint = torch.load(localizer_path, map_location="cpu")
 
-        if not os.path.exists(unet_path):
-            print(f"\n[ERROR] Missing required checkpoint: {unet_path}")
-            print("You must train the segmentation task first to generate the VGG11 encoder weights.")
-            print("Run: python train.py -t segmentation [args]\n")
-            exit(1)
+            unet_state = unet_checkpoint.get("state_dict", unet_checkpoint)
+            class_state = class_checkpoint.get("state_dict", class_checkpoint)
+            loc_state = loc_checkpoint.get("state_dict", loc_checkpoint)
 
-        if not os.path.exists(localizer_path):
-            print(f"\n[ERROR] Missing required checkpoint: {localizer_path}")
-            print("You must train the localization task first to generate the VGG11 encoder weights.")
-            print("Run: python train.py -t localization [args]\n")
-            exit(1)
+            # 4. Filtering encoder from states and renaming the layers in paths
+            class_head = {k.replace("layer", "class_layer"): v for k, v in class_state.items() if not k.startswith("encoder.")}
+            loc_head = {k.replace("layer", "loc_layer"): v for k, v in loc_state.items() if not k.startswith("encoder.")}
+            unet_head = {k: v for k, v in unet_state.items() if not k.startswith("encoder.")}
 
-        unet_checkpoint = torch.load(unet_path, map_location="cpu")
-        class_checkpoint = torch.load(classifier_path, map_location="cpu")
-        loc_checkpoint = torch.load(localizer_path, map_location="cpu")
+            class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
+            loc_encoder = {k.replace("encoder.", ""): v for k, v in loc_state.items() if k.startswith("encoder.")}
+            unet_encoder = {k.replace("encoder.", ""): v for k, v in unet_state.items() if k.startswith("encoder.")}
 
-        unet_state = unet_checkpoint.get("state_dict", unet_checkpoint)
-        class_state = class_checkpoint.get("state_dict", class_checkpoint)
-        loc_state = loc_checkpoint.get("state_dict", loc_checkpoint)
-
-        # 4. Filtering encoder from states and renaming the layers in paths
-        class_head = {k.replace("layer", "class_layer"): v for k, v in class_state.items() if not k.startswith("encoder.")}
-        loc_head = {k.replace("layer", "loc_layer"): v for k, v in loc_state.items() if not k.startswith("encoder.")}
-        unet_head = {k: v for k, v in unet_state.items() if not k.startswith("encoder.")}
-
-        class_encoder = {k.replace("encoder.", ""): v for k, v in class_state.items() if k.startswith("encoder.")}
-        loc_encoder = {k.replace("encoder.", ""): v for k, v in loc_state.items() if k.startswith("encoder.")}
-        unet_encoder = {k.replace("encoder.", ""): v for k, v in unet_state.items() if k.startswith("encoder.")}
-
-        # 5. Loading only the encoder
-        if encoder_backbone == "unet":
-            self.encoder.load_state_dict(unet_encoder, strict=False)
-        elif encoder_backbone == "classifier":
-            self.encoder.load_state_dict(class_encoder, strict=False)
-        elif encoder_backbone == "localizer":
-            self.encoder.load_state_dict(loc_encoder, strict=False)
+            # 5. Loading only the encoder
+            if encoder_backbone == "unet":
+                self.encoder.load_state_dict(unet_encoder, strict=False)
+            elif encoder_backbone == "classifier":
+                self.encoder.load_state_dict(class_encoder, strict=False)
+            elif encoder_backbone == "localizer":
+                self.encoder.load_state_dict(loc_encoder, strict=False)
+            else:
+                raise ValueError("Invalid Backbone to extract Encoder from")
+            
+            # 6. Loading the heads
+            self.load_state_dict(class_head, strict=False)
+            self.load_state_dict(loc_head, strict=False)
+            self.load_state_dict(unet_head, strict=False)
         else:
-            raise ValueError("Invalid Backbone to extract Encoder from")
-        
-        # 6. Loading the heads
-        self.load_state_dict(class_head, strict=False)
-        self.load_state_dict(loc_head, strict=False)
-        self.load_state_dict(unet_head, strict=False)
+            print("[WARNING] One or more checkpoints missing. Initializing Multi-task model with random weights for architecture verification.")
 
 
 
