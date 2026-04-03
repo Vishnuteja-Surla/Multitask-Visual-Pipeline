@@ -9,10 +9,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 import albumentations as A
-import albumentations.pytorch as ToTensorV2
+from albumentations.pytorch import ToTensorV2
 import wandb
 import numpy as np
 from sklearn.metrics import f1_score
+from tqdm import tqdm
 
 # Import your custom modules
 from data.pets_dataset import OxfordIIITPetDataset
@@ -76,8 +77,8 @@ def main():
     ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['class_labels']))
 
     # 3. Datasets & Dataloaders
-    full_train_dataset = OxfordIIITPetDataset(data_dir="./data/oxford-iiit-pet/", transforms=train_transforms)
-    full_val_dataset = OxfordIIITPetDataset(data_dir="./data/oxford-iiit-pet/", transforms=val_transforms)
+    full_train_dataset = OxfordIIITPetDataset(data_dir=args.data_dir, transforms=train_transforms)
+    full_val_dataset = OxfordIIITPetDataset(data_dir=args.data_dir, transforms=val_transforms)
 
     dataset_size = len(full_train_dataset)
     indices = list(range(dataset_size))
@@ -91,11 +92,13 @@ def main():
     train_dataset = torch.utils.data.Subset(full_train_dataset, train_indices)
     val_dataset = torch.utils.data.Subset(full_val_dataset, val_indices)
 
+    optimal_workers = os.cpu_count()
+
     train_loader = DataLoader(
         train_dataset, 
         batch_size=args.batch_size, 
         shuffle=True, # Shuffle batches every epoch
-        num_workers=4, 
+        num_workers=optimal_workers, 
         pin_memory=True # Speeds up data transfer to GPU
     )
     
@@ -103,7 +106,7 @@ def main():
         val_dataset, 
         batch_size=args.batch_size, 
         shuffle=False, # No need to shuffle validation
-        num_workers=4, 
+        num_workers=optimal_workers, 
         pin_memory=True
     )
 
@@ -140,14 +143,16 @@ def main():
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(trainable_params, lr=args.learning_rate)
 
-    best_val_loss = float('inf') if args.task != "classification" else 0.0 # Lowest loss for loc/seg, Highest F1 for class
+    best_val_metric = float('inf') if args.task != "classification" else 0.0 # Lowest loss for loc/seg, Highest F1 for class
 
     # 6. Training Loop
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0.0
 
-        for images, class_labels, bboxes, masks in train_loader:
+        train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]")
+
+        for images, class_labels, bboxes, masks in train_pbar:
             images = images.to(device)
             class_labels = class_labels.to(device)
             bboxes = bboxes.to(device)
@@ -167,6 +172,7 @@ def main():
             optimizer.step()
 
             train_loss += loss.item()
+            train_pbar.set_postfix({"batch_loss": f"{loss.item():.4f}"})
 
         avg_train_loss = train_loss / len(train_loader)
 
@@ -181,7 +187,8 @@ def main():
         val_dice_total = 0.0
 
         with torch.no_grad():
-            for images, class_labels, bboxes, masks in val_loader:
+            val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]")
+            for images, class_labels, bboxes, masks in val_pbar:
                 images = images.to(device)
                 class_labels = class_labels.to(device)
                 bboxes = bboxes.to(device)
@@ -208,6 +215,8 @@ def main():
                     val_dice_total += (1.0 - batch_dice_loss.item())
 
                 val_loss += loss.item()
+
+                val_pbar.set_postfix({"batch_loss": f"{loss.item():.4f}"})
         
         avg_val_loss = val_loss / len(val_loader)
 
