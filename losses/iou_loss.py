@@ -31,6 +31,9 @@ class IoULoss(nn.Module):
         # Unpack Pred Boxes
         pred_xc, pred_yc, pred_w, pred_h = pred_boxes[:, 0], pred_boxes[:, 1], pred_boxes[:, 2], pred_boxes[:, 3]
 
+        pred_w = torch.clamp(pred_w, min=0.0)
+        pred_h = torch.clamp(pred_h, min=0.0)
+
         # Reconvert pred to min-max format
         pred_xmin = pred_xc - (pred_w / 2)
         pred_xmax = pred_xc + (pred_w / 2)
@@ -60,6 +63,8 @@ class IoULoss(nn.Module):
         target_area = target_w * target_h
         inter_area = inter_w * inter_h
         union_area = pred_area + target_area - inter_area
+
+        union_area = torch.clamp(union_area, min=self.eps)
 
         # Loss calculation
         iou_score = inter_area / (union_area + self.eps)

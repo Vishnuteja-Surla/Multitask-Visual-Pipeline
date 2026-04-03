@@ -5,7 +5,7 @@ import os
 import xml.etree.ElementTree as ET
 from PIL import Image
 import albumentations as A
-import albumentations.pytorch as ToTensorV2
+from albumentations.pytorch import ToTensorV2
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -35,6 +35,8 @@ class OxfordIIITPetDataset(Dataset):
                 self.filenames.append(filename_no_ext)
                 breed_name = "_".join(filename_no_ext.split("_")[:-1])
                 self.classes.add(breed_name)
+
+        self.filenames.sort() # Sort the filenames for consistent ordering
 
         # 2. Create a mapping from breed name to integer (0 to 36)
         self.classes = sorted(list(self.classes))
@@ -87,8 +89,11 @@ class OxfordIIITPetDataset(Dataset):
                 bbox = transformed['bboxes'][0]
             else:
                 bbox = [0, 0, 0, 0]
+        else:
+            img = torch.from_numpy(img).permute(2, 0, 1).to(torch.float32)
+            img = img / 255.0
 
-        if bbox != [0, 0, 0, 0]: # Only convert if the box wasn't cropped out
+        if bbox[0] != 0 or bbox[1] != 0 or bbox[2] != 0 or bbox[3] != 0: # Only convert if the box wasn't cropped out
             bbox = [
                 (bbox[0] + bbox[2]) / 2.0,  # x_center
                 (bbox[1] + bbox[3]) / 2.0,  # y_center
@@ -97,7 +102,7 @@ class OxfordIIITPetDataset(Dataset):
             ]
 
         # 6. Adjust the mask and return (image, label, bbox, mask)
-        mask = torch.as_tensor(mask, dtype=torch.long) - 1
+        mask = torch.clamp(torch.as_tensor(mask, dtype=torch.long) - 1, min=0, max=2)
         bbox_tensor = torch.tensor(bbox, dtype=torch.float32)
 
         return img, label_idx, bbox_tensor, mask
