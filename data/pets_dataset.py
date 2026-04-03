@@ -3,7 +3,7 @@
 
 import os
 import xml.etree.ElementTree as ET
-import cv2
+from PIL import Image
 import albumentations as A
 import albumentations.pytorch as ToTensorV2
 
@@ -48,12 +48,13 @@ class OxfordIIITPetDataset(Dataset):
 
         # 1. Load the RGB image
         img_path = os.path.join(self.images_dir, f"{filename}.jpg")
-        img = cv2.imread(img_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = Image.open(img_path).convert("RGB")
+        img = np.array(img)
 
         # 2. Load the Mask
         mask_path = os.path.join(self.masks_dir, f"{filename}.png")
-        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        mask = Image.open(mask_path).convert("L")
+        mask = np.array(mask)
 
         # 3. Load XML and extract xmin, ymin, xmax, ymax
         xml_path = os.path.join(self.xmls_dir, f"{filename}.xml")
