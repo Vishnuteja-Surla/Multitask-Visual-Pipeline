@@ -159,8 +159,9 @@ def main():
     # 5. Optimizers
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(trainable_params, lr=args.learning_rate)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    best_val_metric = float('inf') if args.task != "classification" else 0.0 # Lowest loss for loc/seg, Highest F1 for class
+    best_val_metric = 0.0
 
     # 6. Training Loop
     for epoch in range(args.epochs):
@@ -181,7 +182,10 @@ def main():
             if args.task == "classification":
                 loss = ce_loss(outputs, class_labels)
             elif args.task == "localization":
-                loss = mse_loss(outputs, bboxes) + iou_loss(outputs, bboxes)
+                batch_iou_loss = iou_loss(outputs, bboxes)
+                norm_outputs = outputs / 224.0
+                norm_bboxes = bboxes / 224.0
+                loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
             elif args.task == "segmentation":
                 loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
 
@@ -202,6 +206,7 @@ def main():
         all_class_targets = []
         val_iou_total = 0.0
         val_dice_total = 0.0
+        val_pixel_acc_total = 0.0
 
         with torch.no_grad():
             val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]")
@@ -221,7 +226,10 @@ def main():
 
                 elif args.task == "localization":
                     batch_iou_loss = iou_loss(outputs, bboxes)
-                    loss = mse_loss(outputs, bboxes) + batch_iou_loss
+                    # Normalize coordinates to [0, 1] purely for the MSE calculation
+                    norm_outputs = outputs / 224.0
+                    norm_bboxes = bboxes / 224.0
+                    loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
                     # Reverse engineer the IoU score from the loss (IoU = 1 - IoULoss)
                     val_iou_total += (1.0 - batch_iou_loss.item())
 
@@ -231,10 +239,18 @@ def main():
                     # Reverse engineer the Dice score from the loss (Dice = 1 - DiceLoss)
                     val_dice_total += (1.0 - batch_dice_loss.item())
 
+                    # Calculate Pixel Accuracy
+                    preds = torch.argmax(outputs, dim=1)
+                    pixel_acc = (preds == masks).float().mean().item()
+                    # You'll need to initialize val_pixel_acc_total = 0.0 before the loop
+                    val_pixel_acc_total += pixel_acc
+
                 val_loss += loss.item()
 
                 val_pbar.set_postfix({"batch_loss": f"{loss.item():.4f}"})
         
+        scheduler.step() # Step the learning rate scheduler after each epoch
+
         avg_val_loss = val_loss / len(val_loader)
 
         # 8. Metric Calculation and Wandb Logging
@@ -250,20 +266,30 @@ def main():
             metric_display = f"IoU: {avg_iou:.4f}"
             
         elif args.task == "segmentation":
-            avg_dice = val_dice_total / len(val_loader)
-            wandb.log({"train_loss": avg_train_loss, "val_loss": avg_val_loss, "val_dice": avg_dice, "epoch": epoch + 1})
-            metric_display = f"Dice: {avg_dice:.4f}"
+            avg_dice = val_dice_total / len(val_loader)            
+            avg_pixel_acc = val_pixel_acc_total / len(val_loader)
+            wandb.log({
+                "train_loss": avg_train_loss, 
+                "val_loss": avg_val_loss, 
+                "val_dice": avg_dice,
+                "val_pixel_acc": avg_pixel_acc,
+                "epoch": epoch + 1
+            })
+            metric_display = f"Dice: {avg_dice:.4f} | Pixel Acc: {avg_pixel_acc:.4f}"
 
         print(f"Epoch [{epoch+1}/{args.epochs}] - Task: {args.task} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | {metric_display}")
 
         # 9. Simple Checkpointing
-        # Determine if this is the best model (e.g., highest F1 for classification, lowest loss for others)
+        # Determine if this is the best model
         is_best = False
         if args.task == "classification" and current_f1 > best_val_metric:
             best_val_metric = current_f1
             is_best = True
-        elif args.task in ["localization", "segmentation"] and avg_val_loss < best_val_metric:
-            best_val_metric = avg_val_loss
+        elif args.task == "localization" and avg_iou > best_val_metric: # Changed to avg_iou >
+            best_val_metric = avg_iou
+            is_best = True
+        elif args.task == "segmentation" and avg_dice > best_val_metric: # Changed to avg_dice >
+            best_val_metric = avg_dice
             is_best = True
             
         if is_best:
@@ -272,7 +298,8 @@ def main():
             checkpoint_payload = {
                 "state_dict": model.state_dict(),
                 "epoch": epoch,
-                "best_metric": best_val_metric
+                "best_metric": best_val_metric,
+                "classes": full_train_dataset.classes
             }
             
             if args.task == "classification":

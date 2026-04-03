@@ -64,7 +64,7 @@ class IoULoss(nn.Module):
         inter_area = inter_w * inter_h
         union_area = pred_area + target_area - inter_area
 
-        union_area = torch.clamp(union_area, min=self.eps)
+        union_area = torch.clamp(union_area, min=0.0)
 
         # Loss calculation
         iou_score = inter_area / (union_area + self.eps)

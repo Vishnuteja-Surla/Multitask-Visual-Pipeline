@@ -17,6 +17,8 @@ class CustomDropout(nn.Module):
             p: Dropout probability.
         """
         super().__init__()
+        if p < 0.0 or p > 1.0:
+            raise ValueError(f"Dropout probability must be in the range [0, 1], but got {p}")
         self.p = p
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
