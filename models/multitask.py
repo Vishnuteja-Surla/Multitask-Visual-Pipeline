@@ -1,6 +1,7 @@
 """Unified multi-task model
 """
 import os
+import gdown
 import torch
 import torch.nn as nn
 from .vgg11 import VGG11Encoder
@@ -9,7 +10,7 @@ from .layers import CustomDropout
 class MultiTaskPerceptionModel(nn.Module):
     """Shared-backbone multi-task model."""
 
-    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "checkpoints/classifier.pth", localizer_path: str = "checkpoints/localizer.pth", unet_path: str = "checkpoints/unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "classifier", use_batchnorm: bool = True):
+    def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, classifier_path: str = "classifier.pth", localizer_path: str = "localizer.pth", unet_path: str = "unet.pth", dropout_p: int = 0.5, encoder_backbone: str = "classifier", use_batchnorm: bool = True):
         """
         Initialize the shared backbone/heads using these trained weights.
         Args:
@@ -24,6 +25,13 @@ class MultiTaskPerceptionModel(nn.Module):
             use_batchnorm: True if the layers should include batch normalization else False
         """
         super().__init__()
+
+        if not os.path.exists(classifier_path):
+            gdown.download(id="199TQUBZBebtAlOPih6lm_IYG_vWVGJkg", output=classifier_path, quiet=False)
+        if not os.path.exists(localizer_path):
+            gdown.download(id="1a6CQNBaL0-wAx5DSoPk1WYXJjmmjlLzY", output=localizer_path, quiet=False)
+        if not os.path.exists(unet_path):
+            gdown.download(id="1pJ1k_lXAhNsZIkvuuVpL_X39XACaVvtB", output=unet_path, quiet=False)
 
         # 1. Shared Backbone
         self.encoder = VGG11Encoder(in_channels, use_batchnorm)

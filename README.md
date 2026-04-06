@@ -6,7 +6,7 @@ The focus of this assignment is to transition to PyTorch to build a comprehensiv
 
 For the public Weights & Biases report detailing the analysis of this assignment, click here: [W\&B Report Link](https://wandb.ai/cs25m050-indian-institute-of-technology-madras/DA6401_Assignment_02/reports/DA6401-Assignment-2-Report--VmlldzoxNjM1NTA5NA?accessToken=l1g26d64450a2ucaehw61b8gd4i932u2pe6hssvhufvq99s8k1lk0i5zjm3ft197)
 
-For the codebase of this current project, click here: [GitHub Link](https://github.com/Vishnuteja-Surla/Multi-Layer-Perceptron-using-NumPy) *(Note: Follows the official Assignment-2 GitHub Skeleton)*
+For the codebase of this current project, click here: [GitHub Link](https://github.com/Vishnuteja-Surla/Multitask-Visual-Pipeline) *(Note: Follows the official Assignment-2 GitHub Skeleton)*
 
 -----
 

@@ -17,9 +17,9 @@ def parse_args():
     parser.add_argument("-rn", "--run_name", type=str, default="final_pipeline_showcase", help="WandB run name")
     
     # Checkpoint paths
-    parser.add_argument("-c", "--classifier_path", type=str, default="checkpoints/classifier.pth")
-    parser.add_argument("-l", "--localizer_path", type=str, default="checkpoints/localizer.pth")
-    parser.add_argument("-u", "--unet_path", type=str, default="checkpoints/unet.pth")
+    parser.add_argument("-c", "--classifier_path", type=str, default="classifier.pth")
+    parser.add_argument("-l", "--localizer_path", type=str, default="localizer.pth")
+    parser.add_argument("-u", "--unet_path", type=str, default="unet.pth")
     
     # --- Architectural Arguments (Must match training!) ---
     parser.add_argument("-e_b", "--encoder_backbone", type=str, default="unet", choices=["unet", "classifier", "localizer"], help="Which task's encoder to use as the shared backbone")
