@@ -3,3 +3,6 @@ __pycache__/
 wandb/
 data/oxford-iiit-pet/
 test_*.py
+*.zip
+*.tar.gz
+*.pth
