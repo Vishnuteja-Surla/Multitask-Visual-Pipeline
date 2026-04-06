@@ -16,7 +16,11 @@ class VGG11Encoder(nn.Module):
         super().__init__()
 
         # Reusable Max Pool Layer
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool5 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Block 1
         layers1 = [nn.Conv2d(in_channels, 64, kernel_size=3, padding=1)]
@@ -82,23 +86,23 @@ class VGG11Encoder(nn.Module):
 
         x1 = self.block1(x)
         feature_maps["block1"] = x1
-        p1 = self.pool(x1)
+        p1 = self.pool1(x1)
 
         x2 = self.block2(p1)
         feature_maps["block2"] = x2
-        p2 = self.pool(x2)
+        p2 = self.pool2(x2)
 
         x3 = self.block3(p2)
         feature_maps["block3"] = x3
-        p3 = self.pool(x3)
+        p3 = self.pool3(x3)
 
         x4 = self.block4(p3)
         feature_maps["block4"] = x4
-        p4 = self.pool(x4)
+        p4 = self.pool4(x4)
 
         x5 = self.block5(p4)
         feature_maps["block5"] = x5
-        bottleneck = self.pool(x5)
+        bottleneck = self.pool5(x5)
 
         if return_features:
             return bottleneck, feature_maps
