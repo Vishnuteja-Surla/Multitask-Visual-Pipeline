@@ -19,28 +19,37 @@ class OxfordIIITPetDataset(Dataset):
         self.images_dir = os.path.join(data_dir, "images")
         self.masks_dir = os.path.join(data_dir, "annotations", "trimaps")
         self.xmls_dir = os.path.join(data_dir, "annotations", "xmls")
-
         self.transforms = transforms
+        
         self.filenames = []
-        self.classes = set()
+        self.classes = [None] * 37 # Placeholder to store names in order
+        self.class_to_idx = {}
 
-        # 1. Scan the images directory and filter out the bad files
-        for file in os.listdir(self.images_dir):
-            if file.startswith("._") or not file.endswith(".jpg"):
-                continue    # Skip the non-JPG files and hidden files
+        # 1. Parse the official list.txt to get the exact class mappings
+        list_txt_path = os.path.join(data_dir, "annotations", "list.txt")
+        with open(list_txt_path, 'r') as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    filename = parts[0]
+                    
+                    # Ensure the image and mask actually exist before adding
+                    if os.path.exists(os.path.join(self.images_dir, f"{filename}.jpg")) and \
+                       os.path.exists(os.path.join(self.masks_dir, f"{filename}.png")):
+                       
+                        breed_name = "_".join(filename.split("_")[:-1])
+                        class_id = int(parts[1]) - 1 # Official ID is 1-indexed, we need 0-indexed
+                        
+                        self.filenames.append(filename)
+                        self.class_to_idx[breed_name] = class_id
+                        self.classes[class_id] = breed_name
 
-            filename_no_ext = os.path.splitext(file)[0]
-
-            if os.path.exists(os.path.join(self.xmls_dir, f"{filename_no_ext}.xml")) and os.path.exists(os.path.join(self.masks_dir, f"{filename_no_ext}.png")):
-                self.filenames.append(filename_no_ext)
-                breed_name = "_".join(filename_no_ext.split("_")[:-1])
-                self.classes.add(breed_name)
-
-        self.filenames.sort() # Sort the filenames for consistent ordering
-
-        # 2. Create a mapping from breed name to integer (0 to 36)
-        self.classes = sorted(list(self.classes))
-        self.class_to_idx = {breed: idx for idx, breed in enumerate(self.classes)}
+        # 2. THE ANTI-LEAKAGE LOCK: 
+        # Sort the filenames alphabetically to guarantee 100% deterministic ordering 
+        # before train.py applies its seeded random split.
+        self.filenames.sort()
 
     def __len__(self):
         return len(self.filenames)

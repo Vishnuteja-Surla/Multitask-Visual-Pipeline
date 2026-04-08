@@ -234,6 +234,8 @@ def main():
                     loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
 
             scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             scaler.step(optimizer)
             scaler.update()
 

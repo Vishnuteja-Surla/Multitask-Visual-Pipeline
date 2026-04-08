@@ -1,8 +1,9 @@
 *.pdf
 __pycache__/
 wandb/
-data/oxford-iiit-pet/
+oxford-iiit-pet/
 test_*.py
 *.zip
 *.tar.gz
 *.pth
+data/oxford-iiit-pet/
