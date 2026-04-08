@@ -179,7 +179,7 @@ def main():
         else:
             print("[WARNING] classifier.pth missing. Initializing UNet encoder with random weights.")
 
-        ce_loss = nn.CrossEntropyLoss()
+        ce_loss = nn.CrossEntropyLoss(label_smoothing=0.1)
         dice_loss = DiceLoss()
 
     model = model.to(device)
@@ -200,11 +200,12 @@ def main():
 
     # 5. Optimizers
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = optim.Adam(trainable_params, lr=args.learning_rate)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    optimizer = optim.AdamW(trainable_params, lr=args.learning_rate, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
 
     best_val_metric = 0.0
 
+    scaler = torch.amp.GradScaler('cuda')
     # 6. Training Loop
     for epoch in range(args.epochs):
         model.train()
@@ -219,20 +220,22 @@ def main():
             masks = masks.to(device)
 
             optimizer.zero_grad()
-            outputs = model(images)
 
-            if args.task == "classification":
-                loss = ce_loss(outputs, class_labels)
-            elif args.task == "localization":
-                batch_iou_loss = iou_loss(outputs, bboxes)
-                norm_outputs = outputs / 224.0
-                norm_bboxes = bboxes / 224.0
-                loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
-            elif args.task == "segmentation":
-                loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
+            with torch.autocast(device_type='cuda', dtype=torch.float16):
+                outputs = model(images)
+                if args.task == "classification":
+                    loss = ce_loss(outputs, class_labels)
+                elif args.task == "localization":
+                    batch_iou_loss = iou_loss(outputs, bboxes)
+                    norm_outputs = outputs / 224.0
+                    norm_bboxes = bboxes / 224.0
+                    loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
+                elif args.task == "segmentation":
+                    loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
 
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
             train_loss += loss.item()
             train_pbar.set_postfix({"batch_loss": f"{loss.item():.4f}"})
