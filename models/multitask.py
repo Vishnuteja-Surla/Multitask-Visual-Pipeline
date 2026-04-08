@@ -27,7 +27,7 @@ class MultiTaskPerceptionModel(nn.Module):
         super().__init__()
 
         if not os.path.exists(classifier_path):
-            gdown.download(id="199TQUBZBebtAlOPih6lm_IYG_vWVGJkg", output=classifier_path, quiet=False)
+            gdown.download(id="1aoEoRSHl9_ntEGFL-CKRy_kHzsm9FQBm", output=classifier_path, quiet=False)
         if not os.path.exists(localizer_path):
             gdown.download(id="1a6CQNBaL0-wAx5DSoPk1WYXJjmmjlLzY", output=localizer_path, quiet=False)
         if not os.path.exists(unet_path):
