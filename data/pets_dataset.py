@@ -35,9 +35,14 @@ class OxfordIIITPetDataset(Dataset):
                 if len(parts) >= 2:
                     filename = parts[0]
                     
-                    # Ensure the image and mask actually exist before adding
+                    # --- THE HIDDEN FILE FILTER ---
+                    if filename.startswith(".") or filename.startswith("._"):
+                        continue
+                    
+                    # Ensure the image, mask, AND xml actually exist before adding
                     if os.path.exists(os.path.join(self.images_dir, f"{filename}.jpg")) and \
-                       os.path.exists(os.path.join(self.masks_dir, f"{filename}.png")):
+                       os.path.exists(os.path.join(self.masks_dir, f"{filename}.png")) and \
+                       os.path.exists(os.path.join(self.xmls_dir, f"{filename}.xml")):
                        
                         breed_name = "_".join(filename.split("_")[:-1])
                         class_id = int(parts[1]) - 1 # Official ID is 1-indexed, we need 0-indexed
