@@ -213,11 +213,12 @@ def main():
 
         train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]")
 
-        for images, class_labels, bboxes, masks in train_pbar:
+        for images, class_labels, bboxes, masks, has_bbox in train_pbar:
             images = images.to(device)
             class_labels = class_labels.to(device)
             bboxes = bboxes.to(device)
             masks = masks.to(device)
+            has_bbox = has_bbox.to(device)
 
             optimizer.zero_grad()
 
@@ -226,9 +227,15 @@ def main():
                 if args.task == "classification":
                     loss = ce_loss(outputs, class_labels)
                 elif args.task == "localization":
-                    batch_iou_loss = iou_loss(outputs, bboxes)
-                    norm_outputs = outputs / 224.0
-                    norm_bboxes = bboxes / 224.0
+                    if not has_bbox.any():
+                        continue
+
+                    valid_outputs = outputs[has_bbox]
+                    valid_bboxes = bboxes[has_bbox]
+
+                    batch_iou_loss = iou_loss(valid_outputs, valid_bboxes)
+                    norm_outputs = valid_outputs / 224.0
+                    norm_bboxes = valid_bboxes / 224.0
                     loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
                 elif args.task == "segmentation":
                     loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
@@ -257,11 +264,12 @@ def main():
 
         with torch.no_grad():
             val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]")
-            for images, class_labels, bboxes, masks in val_pbar:
+            for images, class_labels, bboxes, masks, has_bbox in val_pbar:
                 images = images.to(device)
                 class_labels = class_labels.to(device)
                 bboxes = bboxes.to(device)
                 masks = masks.to(device)
+                has_bbox = has_bbox.to(device)
 
                 outputs = model(images)
 
@@ -272,10 +280,16 @@ def main():
                     all_class_targets.extend(class_labels.cpu().numpy())
 
                 elif args.task == "localization":
-                    batch_iou_loss = iou_loss(outputs, bboxes)
+
+                    if not has_bbox.any():
+                        continue
+                    valid_outputs = outputs[has_bbox]
+                    valid_bboxes = bboxes[has_bbox]
+
+                    batch_iou_loss = iou_loss(valid_outputs, valid_bboxes)
                     # Normalize coordinates to [0, 1] purely for the MSE calculation
-                    norm_outputs = outputs / 224.0
-                    norm_bboxes = bboxes / 224.0
+                    norm_outputs = valid_outputs / 224.0
+                    norm_bboxes = valid_bboxes / 224.0
                     loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
                     # Reverse engineer the IoU score from the loss (IoU = 1 - IoULoss)
                     val_iou_total += (1.0 - batch_iou_loss.item())

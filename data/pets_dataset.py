@@ -41,8 +41,7 @@ class OxfordIIITPetDataset(Dataset):
                     
                     # Ensure the image, mask, AND xml actually exist before adding
                     if os.path.exists(os.path.join(self.images_dir, f"{filename}.jpg")) and \
-                       os.path.exists(os.path.join(self.masks_dir, f"{filename}.png")) and \
-                       os.path.exists(os.path.join(self.xmls_dir, f"{filename}.xml")):
+                       os.path.exists(os.path.join(self.masks_dir, f"{filename}.png")):
                        
                         breed_name = "_".join(filename.split("_")[:-1])
                         class_id = int(parts[1]) - 1 # Official ID is 1-indexed, we need 0-indexed
@@ -74,16 +73,22 @@ class OxfordIIITPetDataset(Dataset):
 
         # 3. Load XML and extract xmin, ymin, xmax, ymax
         xml_path = os.path.join(self.xmls_dir, f"{filename}.xml")
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
+        has_bbox = os.path.exists(xml_path)
 
-        xmin = int(root.find('.//xmin').text)
-        xmax = int(root.find('.//xmax').text)
-        ymin = int(root.find('.//ymin').text)
-        ymax = int(root.find('.//ymax').text)
+        if has_bbox:
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
 
-        # 4. Create a min-max Bounding Box
-        bbox = [xmin, ymin, xmax, ymax]
+            xmin = int(root.find('.//xmin').text)
+            xmax = int(root.find('.//xmax').text)
+            ymin = int(root.find('.//ymin').text)
+            ymax = int(root.find('.//ymax').text)
+
+            # 4. Create a min-max Bounding Box
+            bbox = [xmin, ymin, xmax, ymax]
+        else:
+            img_h, img_w = img.shape[:2]
+            bbox = [0, 0, img_w, img_h]
 
         # 5. Apply self.transforms on the image data
         breed_name = "_".join(filename.split("_")[:-1])
@@ -119,4 +124,4 @@ class OxfordIIITPetDataset(Dataset):
         mask = torch.clamp(torch.as_tensor(mask, dtype=torch.long) - 1, min=0, max=2)
         bbox_tensor = torch.tensor(bbox, dtype=torch.float32)
 
-        return img, label_idx, bbox_tensor, mask
+        return img, label_idx, bbox_tensor, mask, has_bbox
