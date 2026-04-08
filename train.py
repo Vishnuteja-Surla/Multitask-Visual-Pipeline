@@ -107,7 +107,12 @@ def main():
         A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.5),
         A.Normalize(mean=vgg_mean, std=vgg_std),
         ToTensorV2()
-    ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['class_labels']))
+    ], bbox_params=A.BboxParams(
+        format='pascal_voc', 
+        label_fields=['class_labels'],
+        clip=True,
+        min_visibility=0.1
+    ))
 
     val_transforms = A.Compose([
         A.Resize(224, 224),
@@ -179,7 +184,7 @@ def main():
         else:
             print("[WARNING] classifier.pth missing. Initializing UNet encoder with random weights.")
 
-        ce_loss = nn.CrossEntropyLoss(label_smoothing=0.1)
+        ce_loss = nn.CrossEntropyLoss()
         dice_loss = DiceLoss()
 
     model = model.to(device)
