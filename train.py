@@ -170,7 +170,7 @@ def main():
         else:
             print("[WARNING] classifier.pth missing. Initializing localizer encoder with random weights.")
 
-        box_loss = nn.SmoothL1Loss(beta=0.01)
+        box_loss = nn.SmoothL1Loss()
         iou_loss = IoULoss(reduction="mean")
 
     elif args.task == "segmentation":
@@ -239,9 +239,9 @@ def main():
                     valid_bboxes = bboxes[has_bbox]
 
                     batch_iou_loss = iou_loss(valid_outputs, valid_bboxes)
-                    norm_outputs = valid_outputs / 224.0
-                    norm_bboxes = valid_bboxes / 224.0
-                    loss = box_loss(norm_outputs, norm_bboxes) + batch_iou_loss
+                    # norm_outputs = valid_outputs / 224.0
+                    # norm_bboxes = valid_bboxes / 224.0
+                    loss = box_loss(valid_outputs, valid_bboxes) + batch_iou_loss
                 elif args.task == "segmentation":
                     loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
 
@@ -293,9 +293,9 @@ def main():
 
                     batch_iou_loss = iou_loss(valid_outputs, valid_bboxes)
                     # Normalize coordinates to [0, 1] purely for the MSE calculation
-                    norm_outputs = valid_outputs / 224.0
-                    norm_bboxes = valid_bboxes / 224.0
-                    loss = box_loss(norm_outputs, norm_bboxes) + batch_iou_loss
+                    # norm_outputs = valid_outputs / 224.0
+                    # norm_bboxes = valid_bboxes / 224.0
+                    loss = box_loss(valid_outputs, valid_bboxes) + batch_iou_loss
                     # Reverse engineer the IoU score from the loss (IoU = 1 - IoULoss)
                     val_iou_total += (1.0 - batch_iou_loss.item())
 
