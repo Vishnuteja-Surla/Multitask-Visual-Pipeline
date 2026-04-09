@@ -170,7 +170,7 @@ def main():
         else:
             print("[WARNING] classifier.pth missing. Initializing localizer encoder with random weights.")
 
-        mse_loss = nn.MSELoss()
+        box_loss = nn.SmoothL1Loss(beta=0.01)
         iou_loss = IoULoss(reduction="mean")
 
     elif args.task == "segmentation":
@@ -241,7 +241,7 @@ def main():
                     batch_iou_loss = iou_loss(valid_outputs, valid_bboxes)
                     norm_outputs = valid_outputs / 224.0
                     norm_bboxes = valid_bboxes / 224.0
-                    loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
+                    loss = box_loss(norm_outputs, norm_bboxes) + batch_iou_loss
                 elif args.task == "segmentation":
                     loss = ce_loss(outputs, masks) + dice_loss(outputs, masks)
 
