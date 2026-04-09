@@ -31,7 +31,7 @@ class MultiTaskPerceptionModel(nn.Module):
         if not os.path.exists(localizer_path):
             gdown.download(id="1eXMH6kkgzkIMqpJ-GqGX2i3rlhGW13Q1", output=localizer_path, quiet=False)
         if not os.path.exists(unet_path):
-            gdown.download(id="1pJ1k_lXAhNsZIkvuuVpL_X39XACaVvtB", output=unet_path, quiet=False)
+            gdown.download(id="1EAzLktI0EU3aCrk-nNcTQBXavPrqtOn4", output=unet_path, quiet=False)
 
         # 1. Shared Backbone
         self.encoder = VGG11Encoder(in_channels, use_batchnorm)
