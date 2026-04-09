@@ -295,7 +295,7 @@ def main():
                     # Normalize coordinates to [0, 1] purely for the MSE calculation
                     norm_outputs = valid_outputs / 224.0
                     norm_bboxes = valid_bboxes / 224.0
-                    loss = mse_loss(norm_outputs, norm_bboxes) + batch_iou_loss
+                    loss = box_loss(norm_outputs, norm_bboxes) + batch_iou_loss
                     # Reverse engineer the IoU score from the loss (IoU = 1 - IoULoss)
                     val_iou_total += (1.0 - batch_iou_loss.item())
 
